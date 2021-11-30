@@ -29,7 +29,9 @@ void* allocate_linear()
 The monotonic index value is always available via the tail pointer. This means you can override the use of the pool allocation strategy and always perform a linear allocation. This can potentially increase fragmentation, but provide guarentees on the performance and guarntee linear memory is returned.
  
 ## Use Case
-The primary designed use case was to be used allocating tree structures, where the majority of nodes are created at initial construction and transformations are performed on that structure. E.g. Reading in a file and constructing a tree from that data. This allocator leverages the speed of a linear allocator when the bulk of the nodes are created, and still allows the possibility of deallocations when manipulating the tree.
+The primary designed use case is to be used allocating tree structures, where the majority of nodes are created at initial construction and transformations are performed on that structure. E.g. Reading in a file and constructing a tree from that data. This allocator leverages the speed of a linear allocator when the bulk of the nodes are created, and still allows the possibility of deallocations when manipulating the tree.
+
+This allocator is designed to be composed with other allocator compontents (Segreator, Bucketizer etc) that manage multiple allocators to enable expanding, condensing, and policies of allocations.
 
 ## Benchmark
 The benchmark is X speed up compared against my standard Pool Allocator. This is by no means a thorough benchmark - My Pool Allocator that I compare against might not be the fastest. 
@@ -42,6 +44,11 @@ This benchmark shows the allocation and deallocation of all nodes in sequence. A
 
 ### Results
 
-The default strategy of Linear Pool Allocator is slower than the default Pool Allocator (red vs blue bars), until pool size is > 32k. While I would like to get this smaller, I am not surprised by this. The benefit of this allocator is to be able to utilise the linear allocator behaviour when a tree is initially being constructed - when most allocations occur. I also suspect the cache is helping the standard pool allocator here - the small node sizes and allocation style of the benchmark is most likely showing the worst case difference.
+The default strategy of Linear Pool Allocator is slower than the default Pool Allocator (red vs blue bars), until pool size is > 32k. While I would like to get this smaller, I am not surprised by this. I also suspect the cache is helping the standard pool allocator here - the small node sizes and allocation style of the benchmark is most likely showing the worst case difference.
+
+The benefit of this allocator is to be able to utilise the linear allocator behaviour when a tree is initially being constructed - when most allocations occur.
 
 Using the linear allocation strategy enables a 1.5x - 2x speed up over a pool allocator. This is most likely slower than a standard linear allocator (not measured here) - But provides the possibility to deallocate and reuse.
+
+## Next
+I have no interest in writing or maintaining a library. By all means, if you see value in this, you are welcome to it. 
