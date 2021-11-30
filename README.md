@@ -16,16 +16,16 @@ block_t* head{ &pool[pool_size] } - Head is a pointer to the last element of the
 block_t** tail{ &head } - This is a pointer to either the head variable, or a ->next variable within a free slot node.
 
 void* allocate() / void dellocate(void*)
-* Linear Mode
+* **Linear Mode**
 If tail is equal to the address of head - We know that the pool allocator has no free slots in the linked list, and we use the linear allocation method. In this mode, the value of head is the linear allocation monotonic index.
 
-* Pool Mode
+* **Pool Mode**
 When a block is deallocated, We perform the normal pool allocation steps. The monotonic index value is set into the first free slot's ->next value. The value of tail is then set to the address of ->next. Further deallocations does not move this value as the linked list is First In, Last Out.
 
 When in Pool Mode, an allocation will default to the Pool allocation strategy. The first free slot is selected, head is set to the value of ->next, and that slot is returned. If tail was pointing to that slots ->next variable, tail is set to head - returning to Linear Mode.
 
 void* allocate_linear()
-* Forced Linear Mode
+* **Forced Linear Mode**
 The monotonic index value is always available via the tail pointer. This means you can override the use of the pool allocation strategy and always perform a linear allocation. This can potentially increase fragmentation, but provide guarentees on the performance and guarntee linear memory is returned.
  
 ## Use Case
