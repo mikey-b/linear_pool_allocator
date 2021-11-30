@@ -8,6 +8,11 @@ The shortcomings of a Pool Allocator is the initial initialisation of the linked
 
 The Linear Pool Allocator works by treating all first allocations of a block as a Linear allocation. When a block is deallocated, that block is then added to the head of the pool allocator side of the allocator. This means there is no upfront construction of the pool allocators linked list, and first time allocations are always done via the faster linear allocation.
 
+## Use Case
+The primary designed use case is to be used allocating tree structures, where the majority of nodes are created at initial construction and transformations are performed on that structure. E.g. Reading in a file and constructing a tree from that data. This allocator leverages the speed of a linear allocator when the bulk of the nodes are created, and still allows the possibility of deallocations when manipulating the tree.
+
+This allocator is designed to be composed with other allocator compontents (Segreator, Bucketizer etc) that manage multiple allocators to enable expanding, condensing, and policies of allocations.
+
 ## Algorithm
 struct slot_node - A structure of a free slot for the pool allocator
 
@@ -27,11 +32,6 @@ When in Pool Mode, an allocation will default to the Pool allocation strategy. T
 void* allocate_linear()
 * **Forced Linear Mode**
 The monotonic index value is always available via the tail pointer. This means you can override the use of the pool allocation strategy and always perform a linear allocation. This can potentially increase fragmentation, but provide guarantees on the performance and guarantee linear memory is returned.
- 
-## Use Case
-The primary designed use case is to be used allocating tree structures, where the majority of nodes are created at initial construction and transformations are performed on that structure. E.g. Reading in a file and constructing a tree from that data. This allocator leverages the speed of a linear allocator when the bulk of the nodes are created, and still allows the possibility of deallocations when manipulating the tree.
-
-This allocator is designed to be composed with other allocator compontents (Segreator, Bucketizer etc) that manage multiple allocators to enable expanding, condensing, and policies of allocations.
 
 ## Benchmark
 The benchmark is X speed up compared against my standard Pool Allocator. This is by no means a thorough benchmark - My Pool Allocator that I compare against might not be the fastest. 
