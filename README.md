@@ -26,7 +26,7 @@ When in Pool Mode, an allocation will default to the Pool allocation strategy. T
 
 void* allocate_linear()
 * **Forced Linear Mode**
-The monotonic index value is always available via the tail pointer. This means you can override the use of the pool allocation strategy and always perform a linear allocation. This can potentially increase fragmentation, but provide guarentees on the performance and guarntee linear memory is returned.
+The monotonic index value is always available via the tail pointer. This means you can override the use of the pool allocation strategy and always perform a linear allocation. This can potentially increase fragmentation, but provide guarantees on the performance and guarantee linear memory is returned.
  
 ## Use Case
 The primary designed use case is to be used allocating tree structures, where the majority of nodes are created at initial construction and transformations are performed on that structure. E.g. Reading in a file and constructing a tree from that data. This allocator leverages the speed of a linear allocator when the bulk of the nodes are created, and still allows the possibility of deallocations when manipulating the tree.
