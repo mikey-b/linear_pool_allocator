@@ -22,21 +22,21 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
         return reinterpret_cast<void*>(*tail);
     }
 
-    [[gnu::malloc]] void* allocate() {
+	[[gnu::malloc]] void* allocate() {
 		if (head == &pool[0]) return nullptr;
 
 		if (tail == &head) {
-            head -= 1;
-            return reinterpret_cast<void*>(head); 
+			head -= 1;
+			return reinterpret_cast<void*>(head); 
 		} else {
 			auto node = reinterpret_cast<slot_node*>(head);
-            if (reinterpret_cast<slot_node**>(tail) == &node->next) {
-                tail = &head;
+			if (reinterpret_cast<slot_node**>(tail) == &node->next) {
+				tail = &head;
 			}
 			head = reinterpret_cast<bucket_t*>(node->next);
 			return reinterpret_cast<void*>(node);                
-        }
-    }
+		}
+	}
 
     [[gnu::nonnull]] void deallocate(void* blk) {
         if (*tail == reinterpret_cast<bucket_t*>(blk)) {
