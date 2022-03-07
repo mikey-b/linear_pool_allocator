@@ -16,10 +16,20 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 	block_t pool[pool_size];
 
  public:
+	template<bool isInitialConstruction = false>
 	[[gnu::malloc]] void* allocate_linear() {
-		if (*tail == &pool[0]) return nullptr;
-		*tail -= 1;
-		return reinterpret_cast<void*>(*tail);
+		if constexpr (isInitialConstruction) {
+			// We can remove the indirection if we can guarentee that there has never
+			// been a dealloation yet. This is now identical to a bump allocator.
+			// assert(*tail == head);
+			if (head == &pool[0]) return nullptr;
+			head -= 1;
+			return reinterpret_cast<void*>(head);
+		} else {
+			if (*tail == &pool[0]) return nullptr;
+			*tail -= 1;
+			return reinterpret_cast<void*>(*tail);
+		}
 	}
 
 	[[gnu::malloc]] void* allocate() {
