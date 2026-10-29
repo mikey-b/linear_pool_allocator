@@ -63,4 +63,12 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 		head = &pool[pool_size]; // This is correct! Always starts as a linear allocator and to the RIGHT of the last element
 		tail = &head;
 	}
+	
+	linear_pool_allocator() = default;
+	
+	linear_pool_allocator(linear_pool_allocator const&) = delete;
+	linear_pool_allocator& operator=(linear_pool_allocator const&) = delete;
+	
+	linear_pool_allocator(linear_pool_allocator&&) = delete;
+	linear_pool_allocator& operator=(linear_pool_allocator&&) = delete;
 };
