@@ -10,7 +10,7 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 	struct slot_node {
 		block_t* next;
 	};
-	static_assert(sizeof(block_t) <= sizeof(slot_node));
+	static_assert(sizeof(block_t) >= sizeof(slot_node));
 	static_assert(alignof(block_t) >= alignof(slot_node));
 
 	block_t* head{ &pool[pool_size] }; // This is correct! Always starts as a linear allocator and to the RIGHT of the last element
