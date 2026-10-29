@@ -21,8 +21,8 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 	template<bool isInitialConstruction = false>
 	[[gnu::malloc]] void* allocate_linear() {
 		if constexpr (isInitialConstruction) {
-			// We can remove the indirection if we can guarentee that there has never
-			// been a dealloation yet. This is now identical to a bump allocator.
+			// We can remove the indirection if we can guarentee that the freelist
+			// is empty. This is now identical to a bump allocator.
 			assert(tail == &head);
 			if (head == &pool[0]) return nullptr;
 			head -= 1;
@@ -39,10 +39,12 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 
 		if (tail == &head) {
 			head -= 1;
-			return reinterpret_cast<void*>(head); 
+			return static_cast<void*>(head); 
 		} else {
 			auto node = reinterpret_cast<slot_node*>(head);
 			if (tail == &node->next) {
+				// This is the last node on the freelist
+				// point tail to head to signal freelist is empty
 				tail = &head;
 			}
 			head = node->next;
@@ -60,7 +62,12 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 			// blk will be made part of the freelist
 			auto node = reinterpret_cast<slot_node*>(blk);
 			node->next = head;
-			if (tail == &head) tail = &node->next;
+			if (tail == &head) {
+				// This is the first node on the freelist,
+				// set tail to the address pointing to frontier
+				// and signal freelist exists
+				tail = &node->next;
+			}
 			head = blk;
 		}
 	}
