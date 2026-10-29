@@ -1,15 +1,17 @@
 #pragma once
 #include <type_traits>
 #include <cstddef>
+#include <cassert>
 
 template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_align_t), int pool_size = 1024*64> struct linear_pool_allocator {
  private:
 	using block_t = typename std::aligned_storage<slot_size, slot_alignment>::type;
 
 	struct slot_node {
-		slot_node* next;
+		block_t* next;
 	};
-	static_assert(sizeof(slot_node) <= sizeof(block_t));
+	static_assert(sizeof(block_t) <= sizeof(slot_node));
+	static_assert(alignof(block_t) >= alignof(slot_node));
 
 	block_t* head{ &pool[pool_size] }; // This is correct! Always starts as a linear allocator and to the RIGHT of the last element
 	block_t** tail{ &head };
@@ -21,14 +23,14 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 		if constexpr (isInitialConstruction) {
 			// We can remove the indirection if we can guarentee that there has never
 			// been a dealloation yet. This is now identical to a bump allocator.
-			// assert(*tail == head);
+			assert(tail == &head);
 			if (head == &pool[0]) return nullptr;
 			head -= 1;
-			return reinterpret_cast<void*>(head);
+			return static_cast<void*>(head);
 		} else {
 			if (*tail == &pool[0]) return nullptr;
 			*tail -= 1;
-			return reinterpret_cast<void*>(*tail);
+			return static_cast<void*>(*tail);
 		}
 	}
 
@@ -40,22 +42,26 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 			return reinterpret_cast<void*>(head); 
 		} else {
 			auto node = reinterpret_cast<slot_node*>(head);
-			if (reinterpret_cast<slot_node**>(tail) == &node->next) {
+			if (tail == &node->next) {
 				tail = &head;
 			}
-			head = reinterpret_cast<block_t*>(node->next);
-			return reinterpret_cast<void*>(node);                
+			head = node->next;
+			return static_cast<void*>(node);
 		}
 	}
 
-	[[gnu::nonnull]] void deallocate(void* blk) {
-		if (*tail == reinterpret_cast<block_t*>(blk)) {
+	[[gnu::nonnull]] void deallocate(void* _blk) {
+		auto blk = static_cast<block_t*>(_blk);
+		
+		if (*tail == blk) {
+			// _blk is top of linear stack, pop to free.
 			*tail += 1;
-		} else {
+		} else { 
+			// blk will be made part of the freelist
 			auto node = reinterpret_cast<slot_node*>(blk);
-			node->next = reinterpret_cast<slot_node*>(head);
-			if (tail == &head) tail = reinterpret_cast<block_t**>(&node->next);
-			head = reinterpret_cast<block_t*>(blk);
+			node->next = head;
+			if (tail == &head) tail = &node->next;
+			head = blk;
 		}
 	}
 
