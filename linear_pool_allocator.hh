@@ -4,7 +4,8 @@
 #include <cstdint>
 #include <new>
 
-template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_align_t), int pool_size = 1024> struct linear_pool_allocator {
+template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_align_t), int pool_size = 1024> 
+struct linear_pool_allocator {
  private:
 
     struct alignas(slot_alignment) block_t {
@@ -19,64 +20,44 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 	static_assert(alignof(block_t) >= alignof(slot_node), "Slot alignment is insufficient for a free-list node.");
     static_assert(pool_size > 0, "Pool size must be greater than zero.");
 
-	block_t* head{ &pool[pool_size] }; // This is correct! Always starts as a linear allocator and to the RIGHT of the last element
-	block_t** tail{ &head };
+	block_t* head{ nullptr }; 
+	block_t* frontier{ &pool[pool_size] }; // This is correct! Always starts as a linear allocator and to the RIGHT of the last element
 	block_t pool[pool_size];
 
  public:
-	template<bool isInitialConstruction = false>
 	[[nodiscard]] void* allocate_linear() {
-		if constexpr (isInitialConstruction) {
-			// We can remove the indirection if we can guarentee that the freelist
-			// is empty. This is now identical to a bump allocator.
-			assert(tail == &head);
-			if (head == &pool[0]) return nullptr;
-			head -= 1;
-			return static_cast<void*>(head);
-		} else {
-			if (*tail == &pool[0]) return nullptr;
-			*tail -= 1;
-			return static_cast<void*>(*tail);
-		}
+        if (frontier == &pool[0]) return nullptr;
+        frontier -= 1;
+        return static_cast<void*>(frontier);
 	}
 
 	[[nodiscard]] void* allocate() {
-		if (head == &pool[0]) return nullptr;
-
-		if (tail == &head) {
-			head -= 1;
-			return static_cast<void*>(head); 
-		} else {
+        if (head != nullptr) {
 			auto blk = head;
 			auto node = std::launder( reinterpret_cast<slot_node*>(blk->storage) );
-			// This is the last node on the freelist
-			// point tail to head to signal freelist is empty
-			tail = (tail == &node->next) ? &head : tail;
 			head = node->next;
 			return static_cast<void*>(blk);
 		}
+
+        return allocate_linear();
 	}
 
 	void deallocate(void* _blk) {
 		auto blk = static_cast<block_t*>(_blk);
 		
-		if (*tail == blk) {
-			// _blk is top of linear stack, pop to free.
-			*tail += 1;
+		if (blk == frontier) { 
+            // _blk is top of linear stack, pop to free.
+			frontier += 1;
 		} else { 
-			// blk will be made part of the freelist
-			auto node = ::new (static_cast<void*>(blk->storage)) slot_node{head};
-			// Is this the first node on the freelist?
-			// If yes, set tail to the address pointing to frontier
-			// and signal freelist exists
-			tail = (tail == &head) ? &node->next : tail;
+            // blk will be made part of the freelist
+			::new (static_cast<void*>(blk->storage)) slot_node{head};
 			head = blk;
 		}
 	}
 
 	void deallocateAll() {
-		head = &pool[pool_size]; // This is correct! Always starts as a linear allocator and to the RIGHT of the last element
-		tail = &head;
+		frontier = &pool[pool_size];
+		head = nullptr;
 	}
 	
 	linear_pool_allocator() = default;
