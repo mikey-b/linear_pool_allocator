@@ -47,16 +47,17 @@ template<std::size_t slot_size, std::size_t slot_alignment = alignof(std::max_al
 			head -= 1;
 			return static_cast<void*>(head); 
 		} else {
-			auto node = std::launder( reinterpret_cast<slot_node*>(head->storage) );
+			auto blk = head;
+			auto node = std::launder( reinterpret_cast<slot_node*>(blk->storage) );
 			// This is the last node on the freelist
 			// point tail to head to signal freelist is empty
 			tail = (tail == &node->next) ? &head : tail;
 			head = node->next;
-			return static_cast<void*>(node);
+			return static_cast<void*>(blk);
 		}
 	}
 
-	void deallocate([[gnu::nonnull]] void* _blk) {
+	void deallocate(void* _blk) {
 		auto blk = static_cast<block_t*>(_blk);
 		
 		if (*tail == blk) {
